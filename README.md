@@ -1,24 +1,56 @@
-
 # Popup / Top-Layer UI Functionality
 
 - @mfreed7, @scottaohara, @BoCupp-Microsoft, @domenic, @gregwhitworth, @chrishtr
 - February 7, 2022
+
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+
+- [Popup / Top-Layer UI Functionality](#popup--top-layer-ui-functionality)
+- [Background](#background)
+- [See Also](#see-also)
+- [Goals](#goals)
+- [The Options](#the-options)
+- [API Shape - HTML Content Attribute](#api-shape---html-content-attribute)
+- [Declarative Trigger (the `triggerpopup` attribute)](#declarative-trigger-the-triggerpopup-attribute)
+- [Dismiss Behavior](#dismiss-behavior)
+- [Classes of UI - Dismiss Behavior and Interactions](#classes-of-ui---dismiss-behavior-and-interactions)
+- [Events](#events)
+- [Focus Management](#focus-management)
+- [Anchoring (The `anchor` Attribute)](#anchoring-the-anchor-attribute)
+- [Display Ordering](#display-ordering)
+- [Accessibility / Semantics](#accessibility--semantics)
+- [Example Use Cases](#example-use-cases)
+  - [Generic Popup (Date Picker)](#generic-popup-date-picker)
+  - [Generic popup (`<selectmenu>` listbox example)](#generic-popup-selectmenu-listbox-example)
+  - [Hint/Tooltip](#hinttooltip)
+  - [Async](#async)
+- [Pros and Cons](#pros-and-cons)
+  - [Pros](#pros)
+  - [Cons](#cons)
+- [Other Options We Explored](#other-options-we-explored)
+  - [Option: An HTML Content Attribute (OLD version)](#option-an-html-content-attribute-old-version)
+  - [Option: Dedicated `<popup>` Element](#option-dedicated-popup-element)
+  - [Option: CSS Property](#option-css-property)
+  - [Option: Javascript API](#option-javascript-api)
+- [Interactions Between Top Layer Elements](#interactions-between-top-layer-elements)
+  - [Current Behavior](#current-behavior)
+  - [Other Top Layer Element Types](#other-top-layer-element-types)
+- [Shadow DOM](#shadow-dom)
+- [Exceeding the Frame Bounds](#exceeding-the-frame-bounds)
+- [Eventual Single-Purpose Elements](#eventual-single-purpose-elements)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 # Background
 
 A new `<popup>` element has been [proposed](https://open-ui.org/components/popup.research.explainer), and has received significant discussion. This document aims to review that discussion, and present various alternatives to the implementation of the functionality as proposed in the explainer.
 
 
-# See Also
-
-See the [`<popup>` explainer](https://open-ui.org/components/popup.research.explainer), and also the comments on [Issue 410](https://github.com/openui/open-ui/issues/410) and [Issue 417](https://github.com/openui/open-ui/issues/417). See also [this discussion](https://github.com/w3c/csswg-drafts/issues/6965) which has mostly been about a CSS alternative for top layer.
-
-
-# Goals
+## Goals
 
 Here are the goals for this functionality, mostly taken from the [goals section](https://open-ui.org/components/popup.research.explainer#goals) of the original `<popup>` element proposal, but modified to describe a more general purpose functionality:
-
-
 
 * Allow any* element and its (arbitrary) descendants to be rendered on top of **all other content** in the host web application.
 * Allow this “top layer” content to be fully styled, including properties which require compositing with other layers of the host web application (e.g. the box-shadow or backdrop-filter CSS properties).
@@ -32,7 +64,10 @@ Here are the goals for this functionality, mostly taken from the [goals section]
 *There may need to be some limitations in some cases.
 
 
-# 
+## See Also
+
+See the [`<popup>` explainer](https://open-ui.org/components/popup.research.explainer), and also the comments on [Issue 410](https://github.com/openui/open-ui/issues/410) and [Issue 417](https://github.com/openui/open-ui/issues/417). See also [this discussion](https://github.com/w3c/csswg-drafts/issues/6965) which has mostly been about a CSS alternative for top layer.
+
 
 
 # The Options
@@ -42,20 +77,19 @@ To achieve the [goals](https://open-ui.org/components/popup.research.explainer#g
 
 
 * A dedicated `<popup>` element.
-* An HTML content attribute.
+* **An HTML content attribute**.
 * A CSS property.
 * A Javascript API.
 
-After significant discussion, it seems that the HTML content attribute might be the best solution. The other options are discussed in the Other Options section of this document. Here is a quick summary of the primary reason each is not an optimal solution:
+After significant discussion, it seems that the HTML content attribute might be the best solution. The other options are discussed in the - [Other Options section](#other-options-we-explored) of this document. Here is a quick summary of the primary reason each is not an optimal solution:
 
 
+* **A dedicated `<popup>` element**: There is no single semantic or AX role that can be used with a “generic” popup element. It will therefore cause issues for AT users. Essentially, the presentation and semantics are not sufficiently/correct separated with this solution.
+* **A CSS property**: There are two problems. One is that a “dual class” top layer will need to be created, with `<dialog>` and fullscreen always above “developer” top layer elements. That precludes using a popup on top of a dialog/fullscreen. The other problem is that light dismiss and one-at-a-time behavior cannot be built into a CSS property.
+* **A Javascript API**: primarily, a JS based solution is less desirable than HTML/CSS solutions. Too many things are left to the developer, leaving many potential footguns.
 
-* A dedicated `<popup>` element: There is no single semantic or AX role that can be used with a “generic” popup element. It will therefore cause issues for AT users. Essentially, the presentation and semantics are not sufficiently/correct separated with this solution.
-* A CSS property: There are two problems. One is that a “dual class” top layer will need to be created, with `<dialog>` and fullscreen always above “developer” top layer elements. That precludes using a popup on top of a dialog/fullscreen. The other problem is that light dismiss and one-at-a-time behavior cannot be built into a CSS property.
-* A Javascript API: primarily, a JS based solution is less desirable than HTML/CSS solutions. Too many things are left to the developer, leaving many potential footguns.
 
-
-# API Shape - HTML Content Attribute
+## API Shape - HTML Content Attribute
 
 A new content attribute, `**popup**`, controls both the top layer status and the dismiss behavior. There are several allowed values for this attribute:
 
@@ -69,18 +103,18 @@ When a popup is not yet visible, the `hidden` attribute is used to indicate this
 
 
 
-* `<div popup=popup hidden>` - A popup that is not yet showing. It will be set to  display:none and not rendered.
+* `<div popup=popup hidden>` - A popup that is not yet showing. It will be set to `display:none` and not rendered.
 * `<div popup=popup>` - The same popup, now visible and top-layer.
 
 It might also be possible to specify two additional values for the `popup` attribute, for modal dialogs and fullscreen elements, such that this attribute could be used to control **all** top layer element types. This would need further exploration. If this approach is **not** taken, then there might need to be restrictions placed on when the `popup` attribute can be used. For example, it should be illegal to apply `popup=popup` to an already-modal `<dialog>`.
 
 
-# Declarative Trigger (the `triggerpopup` attribute)
+## Declarative Trigger (the `triggerpopup` attribute)
 
 A common design pattern is to have an activating element, such as a `<button>`, which makes a popup visible. To facilitate this pattern, another content attribute, `triggerpopup`, will also be added. This attribute’s value should be the idref of another element:
 
 
-```
+```html
 <button triggerpopup=mypopup>Click me</button>
 <div id=mypopup popup=popup hidden>Popup content</div>
 ```
@@ -91,7 +125,7 @@ When the button is activated, the UA will remove the `hidden` attribute value fr
 When the `triggerpopup` attribute is applied to an activating element, the UA should automatically add `aria-haspopup=true` to that element.
 
 
-# Dismiss Behavior
+## Dismiss Behavior
 
 For elements that are displayed on the top layer via this API, there are a number of “triggers” that can cause the element to be removed from the top-layer. These fall into three main categories:
 
@@ -101,12 +135,12 @@ For elements that are displayed on the top layer via this API, there are a numbe
 * **Light Dismiss**. User action such as clicking outside the element, hitting Escape, or causing keyboard focus to leave the element. This is typically called “light dismiss”.
 * **Other Reasons**. Because the top layer is a UA-managed resource, it may have other reasons (for example a user preference) to forcibly remove elements from the top layer.
 
-In all such cases, the UA manages the removal of elements from the top layer, by forcibly removing the `hidden` attribute from the element. This both removes the element from the top layer and renders the element display:none.
+In all such cases, the UA manages the removal of elements from the top layer, by forcibly adding the `hidden` attribute to the element. This both removes the element from the top layer and renders the element `display:none`.
 
 The rules the UA uses to manage these interactions depends on the element types, and this is described in the following section.
 
 
-# Classes of UI - Dismiss Behavior and Interactions
+## Classes of UI - Dismiss Behavior and Interactions
 
 
 
@@ -226,11 +260,10 @@ Second element
   </tr>
 </table>
 
+*Not current behavior
 
-* Not current behavior
 
-
-# Events
+## Events
 
 There is a [general desire](https://github.com/openui/open-ui/issues/342) to receive events indicating that an element has entered or left the top layer via this API. These events can be used, for example, to populate content for a popup just in time before it is shown, or update server data when it closes.
 
@@ -246,9 +279,9 @@ Neither of these events would be cancellable. Both events should be fired synchr
 It would also seem natural that these events would be fired for `<dialog>` elements and fullscreen elements, as they transition into and out of the top layer.
 
 
-# Focus Management
+## Focus Management
 
-Elements that “go” into the top layer sometimes need to move the focus to that element, and sometimes don’t. For example, a modal `<dialog>` gets automatically focused because a dialog is something that requires immediate focus and attention. On the other hand, a `<div popup=hint>` doesn’t receive focus at all (and is typically not expected to contain focusable elements). Similarly, an `<div popup=async>` should not receive focus (even if focusable) because it is meant for out-of-band communication of state, and should not interrupt a user’s current action. Additionally, if the top layer element **should** receive immediate focus, there is a question about **which** part of the element gets that initial focus. For example, the element itself could receive focus, or one of its focusable descendants could receive focus first. For these reasons, there need to be mechanisms available for elements to control focus in the appropriate ways. The `<popup>` element proposal provided two ways to modify focus behavior: the `delegatesfocus` and `autofocus` attributes. The `autofocus` attribute is [already a global attribute](https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/autofocus), so it’d just need to be updated to clarify that the autofocus behavior happens for top layer elements right when they’re added to the top layer. The other attribute provided by the `<popup>` proposal,  `delegatesfocus`, either might not be necessary, or might need to be added as a global attribute:
+Elements that “go” into the top layer sometimes need to move the focus to that element, and sometimes don’t. For example, a modal `<dialog>` gets automatically focused because a dialog is something that requires immediate focus and attention. On the other hand, a `<div popup=hint>` doesn’t receive focus at all (and is typically not expected to contain focusable elements). Similarly, a `<div popup=async>` should not receive focus (even if focusable) because it is meant for out-of-band communication of state, and should not interrupt a user’s current action. Additionally, if the top layer element **should** receive immediate focus, there is a question about **which** part of the element gets that initial focus. For example, the element itself could receive focus, or one of its focusable descendants could receive focus first. For these reasons, there need to be mechanisms available for elements to control focus in the appropriate ways. The `<popup>` element proposal provided two ways to modify focus behavior: the `delegatesfocus` and `autofocus` attributes. The `autofocus` attribute is [already a global attribute](https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/autofocus), so it’d just need to be updated to clarify that the autofocus behavior happens for top layer elements right when they’re added to the top layer. The other attribute provided by the `<popup>` proposal,  `delegatesfocus`, either might not be necessary, or might need to be added as a global attribute:
 
 
 
@@ -258,7 +291,7 @@ Elements that “go” into the top layer sometimes need to move the focus to th
 The use cases for these attributes need to be better enumerated.
 
 
-# Anchoring (The `anchor` Attribute)
+## Anchoring (The `anchor` Attribute)
 
 A new attribute, `anchor`, should be added for all elements, whose value is an idref of an “anchoring” element. This anchor relationship is used for two behaviors:
 
@@ -268,38 +301,39 @@ A new attribute, `anchor`, should be added for all elements, whose value is an i
 2. The referenced anchor element could be used by the [Anchor Positioning feature](https://github.com/MicrosoftEdge/MSEdgeExplainers/blob/main/CSSAnchoredPositioning/explainer.md).
 
 
-# Display Ordering
+## Display Ordering
 
 It is possible for an HTML document to contain multiple elements with `popup=popup`. In this case, only the last such element on the page will remain open when the page is fully loaded. This is because each successive popup element will force the previous one closed via the “one at a time” behavior.
 
 
-# Accessibility / Semantics
+## Accessibility / Semantics
 
 Since the `toplayer` content attribute can be applied to any element, and only impacts the element’s presentation (top layer vs not top layer), this should not have **any semantic or accessibility impact**. I.e. the element with the `toplayer` attribute will keep its existing semantics and AOM representation.
 
 
-# Example Use Cases
+## Example Use Cases
 
 This section contains several HTML examples, showing how various UI elements might be constructed using this API.
 
 
-## Generic Popup (Date Picker)
+### Generic Popup (Date Picker)
 
 
-```
+```html
 <button id=picker-button triggerpopup=datepicker>Pick a date</button> 
 <my-date-picker role=dialog id=datepicker popup=popup hidden>
   ...date picker implementation...
 </my-date-picker>
+
 <!-- No script - the triggerpopup attribute takes care of activation -->
 ```
 
 
 
-##  Generic popup (`<selectmenu>` listbox example)
+###  Generic popup (`<selectmenu>` listbox example)
 
 
-```
+```html
 <selectmenu>
   <template shadowroot=closed>
     <button triggerpopup=listbox>Icon</button>
@@ -310,21 +344,23 @@ This section contains several HTML examples, showing how various UI elements mig
   <option>Option 1</option>
   <option>Option 2</option>
 </selectmenu>
+
 <!-- No script - the triggerpopup attribute takes care of activation -->  
 ```
 
 
 
-## Hint/Tooltip
+### Hint/Tooltip
 
 
-```
+```html
 <div id=hint-trigger aria-describedby=my-hint>
   Hover me
 </div> 
 <my-hint id=hint role=tooltip popup=hint hidden anchor=hint-trigger>
   Hint text
-</my-tooltip> 
+</my-tooltip>
+
 <script>
   const trigger = document.getElementById('hint-trigger');
   const hint = document.querySelector('my-hint');
@@ -338,13 +374,14 @@ This section contains several HTML examples, showing how various UI elements mig
 
 
 
-## Async
+### Async
 
 
-```
+```html
 <div role=alert>
    <my-async-container popup=async hidden></my-async-container>
 </div>
+
 <script>
   window.addEventListener('message',e => {
     const container = document.querySelector('my-async-container');
@@ -356,36 +393,29 @@ This section contains several HTML examples, showing how various UI elements mig
 
 
 
-# Pros and Cons
+## Pros and Cons
 
-
-## Pros
-
-
+### Pros
 
 * Solves all of the goals of the popup effort.
 * Solves the [Accessibility/Semantics problem](#bookmark=id.lkz5h0jgcbkl).
-* Allows the UA to manage the top layer, via changing the `popup` attribute value.
+* Allows the UA to manage the top layer, via addition and removal of the `hidden` attribute.
 * Works on **any element**.
 * Still good DX: it should be easy for developers to understand the meaning of an attribute on an element that is in the top layer.
 
-
-## Cons
-
-
+### Cons
 
 * In some use cases (as [articulated here](https://github.com/openui/open-ui/issues/417#issuecomment-996890656)), the use of a content attribute might cause some DX issues. For example, in the `<selectmenu>` application, we might want to make in-page vs. popup presentation an option. To achieve that via a `toplayer` HTML attribute, there might need to be some mirroring of attributes from the light-dom `<selectmenu>` element to internal shadow dom container elements, which makes the shadow dom replacement feature of `<selectmenu>` a bit more complicated to both use and implement.
 
 
-# 
-
 
 # Other Options We Explored
 
+This section contains mostly older draft ideas, some more and less fleshed out. All of these options were abandoned in favor of the HTML content attribute proposal, due to the "Cons" listed under each section.
 
 ## Option: An HTML Content Attribute (OLD version)
 
-This is an older version of an HTML content attribute proposal. It uses a lot of Javascript, rather than more prescriptive UI classes, to implement light dismiss and one-at-a-time. As such, this version was abandoned for the current proposal.
+This is an older version of an HTML **content attribute** proposal. It uses a lot of Javascript, rather than more prescriptive UI classes, to implement light dismiss and one-at-a-time. As such, this version was abandoned for the current proposal.
 
 ### API Shape
 
