@@ -5,30 +5,23 @@
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+## Table of Contents
 
-- [Popup / Top-Layer UI Functionality](#popup--top-layer-ui-functionality)
 - [Background](#background)
-- [See Also](#see-also)
-- [Goals](#goals)
+  - [Goals](#goals)
+  - [See Also](#see-also)
 - [The Options](#the-options)
-- [API Shape - HTML Content Attribute](#api-shape---html-content-attribute)
-- [Declarative Trigger (the `triggerpopup` attribute)](#declarative-trigger-the-triggerpopup-attribute)
-- [Dismiss Behavior](#dismiss-behavior)
-- [Classes of UI - Dismiss Behavior and Interactions](#classes-of-ui---dismiss-behavior-and-interactions)
-- [Events](#events)
-- [Focus Management](#focus-management)
-- [Anchoring (The `anchor` Attribute)](#anchoring-the-anchor-attribute)
-- [Display Ordering](#display-ordering)
-- [Accessibility / Semantics](#accessibility--semantics)
-- [Example Use Cases](#example-use-cases)
-  - [Generic Popup (Date Picker)](#generic-popup-date-picker)
-  - [Generic popup (`<selectmenu>` listbox example)](#generic-popup-selectmenu-listbox-example)
-  - [Hint/Tooltip](#hinttooltip)
-  - [Async](#async)
-- [Pros and Cons](#pros-and-cons)
-  - [Pros](#pros)
-  - [Cons](#cons)
+  - [API Shape - HTML Content Attribute](#api-shape---html-content-attribute)
+  - [Declarative Trigger (the `triggerpopup` attribute)](#declarative-trigger-the-triggerpopup-attribute)
+  - [Dismiss Behavior](#dismiss-behavior)
+  - [Classes of UI - Dismiss Behavior and Interactions](#classes-of-ui---dismiss-behavior-and-interactions)
+  - [Events](#events)
+  - [Focus Management](#focus-management)
+  - [Anchoring (the `anchor` Attribute)](#anchoring-the-anchor-attribute)
+  - [Display Ordering](#display-ordering)
+  - [Accessibility / Semantics](#accessibility--semantics)
+  - [Example Use Cases](#example-use-cases)
+  - [Pros and Cons](#pros-and-cons)
 - [Other Options We Explored](#other-options-we-explored)
   - [Option: An HTML Content Attribute (OLD version)](#option-an-html-content-attribute-old-version)
   - [Option: Dedicated `<popup>` Element](#option-dedicated-popup-element)
@@ -36,7 +29,6 @@
   - [Option: Javascript API](#option-javascript-api)
 - [Interactions Between Top Layer Elements](#interactions-between-top-layer-elements)
   - [Current Behavior](#current-behavior)
-  - [Other Top Layer Element Types](#other-top-layer-element-types)
 - [Shadow DOM](#shadow-dom)
 - [Exceeding the Frame Bounds](#exceeding-the-frame-bounds)
 - [Eventual Single-Purpose Elements](#eventual-single-purpose-elements)
@@ -54,6 +46,7 @@ Here are the goals for this functionality, mostly taken from the [goals section]
 
 * Allow any* element and its (arbitrary) descendants to be rendered on top of **all other content** in the host web application.
 * Allow this “top layer” content to be fully styled, including properties which require compositing with other layers of the host web application (e.g. the box-shadow or backdrop-filter CSS properties).
+* Allow these top layer elements to reside at semantically-relevant positions in the DOM. I.e. it should not be required to re-parent a top layer element as the last child of the `document.body` simply to escape ancestor containment and transforms.
 * Allow this “top layer” content to be sized and positioned to the author’s discretion.
 * Include **“light dismiss” management functionality**, to remove the element/descendants from the top-layer upon certain actions such as hitting Esc (or any [close signal](https://wicg.github.io/close-watcher/#close-signal)) or clicking outside the element bounds.
 * Include an appropriate user input and focus management experience, with flexibility to modify behaviors such as initial focus.
@@ -66,7 +59,7 @@ Here are the goals for this functionality, mostly taken from the [goals section]
 
 ## See Also
 
-See the [`<popup>` explainer](https://open-ui.org/components/popup.research.explainer), and also the comments on [Issue 410](https://github.com/openui/open-ui/issues/410) and [Issue 417](https://github.com/openui/open-ui/issues/417). See also [this discussion](https://github.com/w3c/csswg-drafts/issues/6965) which has mostly been about a CSS alternative for top layer.
+See the [`<popup>` explainer](https://open-ui.org/components/popup.research.explainer), and also the comments on [Issue 410](https://github.com/openui/open-ui/issues/410) and [Issue 417](https://github.com/openui/open-ui/issues/417). See also [this CSSWG discussion](https://github.com/w3c/csswg-drafts/issues/6965) which has mostly been about a CSS alternative for top layer.
 
 
 
@@ -91,7 +84,7 @@ After significant discussion, it seems that the HTML content attribute might be 
 
 ## API Shape - HTML Content Attribute
 
-A new content attribute, `**popup**`, controls both the top layer status and the dismiss behavior. There are several allowed values for this attribute:
+A new content attribute, **`popup`**, controls both the top layer status and the dismiss behavior. There are several allowed values for this attribute:
 
 
 
@@ -103,7 +96,7 @@ When a popup is not yet visible, the `hidden` attribute is used to indicate this
 
 
 
-* `<div popup=popup hidden>` - A popup that is not yet showing. It will be set to `display:none` and not rendered.
+* `<div popup=popup hidden>` - A popup that is not yet showing. It will be set to `display:none` by the UA stylesheet, and not rendered.
 * `<div popup=popup>` - The same popup, now visible and top-layer.
 
 It might also be possible to specify two additional values for the `popup` attribute, for modal dialogs and fullscreen elements, such that this attribute could be used to control **all** top layer element types. This would need further exploration. If this approach is **not** taken, then there might need to be restrictions placed on when the `popup` attribute can be used. For example, it should be illegal to apply `popup=popup` to an already-modal `<dialog>`.
@@ -120,9 +113,9 @@ A common design pattern is to have an activating element, such as a `<button>`, 
 ```
 
 
-When the button is activated, the UA will remove the `hidden` attribute value from the `mypopup` element, causing it to be rendered top-layer. In this way, no Javascript will be necessary for this use case.
+When the button is activated, the UA will remove the `hidden` attribute value from the `<div id=mypopup>` element, causing it to be rendered top-layer. In this way, no Javascript will be necessary for this use case.
 
-When the `triggerpopup` attribute is applied to an activating element, the UA should automatically add `aria-haspopup=true` to that element.
+When the `triggerpopup` attribute is applied to an activating element, the UA will automatically add `aria-haspopup=true` to that element. In this way, this use pattern will be accessible by default.
 
 
 ## Dismiss Behavior
@@ -131,7 +124,7 @@ For elements that are displayed on the top layer via this API, there are a numbe
 
 
 
-* **One at a Time.** Another element being added to the top-layer causes others to be removed. This is typically used for “one at a time” type elements: when one popup opens, other popups should be closed, so that only one is on-screen at a time. This is also used when “more important” top layer elements get added. For example, fullscreen elements should close other popups.
+* **One at a Time.** Another element being added to the top-layer causes others to be removed. This is typically used for “one at a time” type elements: when one popup opens, other popups should be closed, so that only one is on-screen at a time. This is also used when “more important” top layer elements get added. For example, fullscreen elements should close all open popups.
 * **Light Dismiss**. User action such as clicking outside the element, hitting Escape, or causing keyboard focus to leave the element. This is typically called “light dismiss”.
 * **Other Reasons**. Because the top layer is a UA-managed resource, it may have other reasons (for example a user preference) to forcibly remove elements from the top layer.
 
@@ -144,19 +137,19 @@ The rules the UA uses to manage these interactions depends on the element types,
 
 
 
-* Popup (`popup=popup`)
+* Popup (**`popup=popup`**)
     * When opened, force-closes other popups and hints. An exception is ancestor popups, defined via DOM hierarchy, anchor attribute, or triggerpopup attribute.
     * Dismisses on Esc, click outside, or blur.
-* Hint/Tooltip (`popup=hint`)
+* Hint/Tooltip (**`popup=hint`**)
     * When opened, force-closes only other hints, but leaves all other popup types open.
     * Dismisses on Esc, click outside, when no longer hovered (after a timeout), or when the anchor element loses focus.
-* Async (`popup=async`)
+* Async (**`popup=async`**)
     * Does not force-close any other element type.
     * Does not light-dismiss - closes via timer or explicit close action.
-* Dialog (`<dialog>.showModal()`)
+* Dialog (**`<dialog>.showModal()`**)
     * When opened, force-closes popup, hint, and async.
     * Dismisses on Esc
-* Fullscreen (`<div>.requestFullscreen()`)
+* Fullscreen (**`<div>.requestFullscreen()`**)
     * When opened, force-closes popup, hint, async, and (with spec changes) dialog
     * Dismisses on Esc
 
@@ -291,7 +284,7 @@ Elements that “go” into the top layer sometimes need to move the focus to th
 The use cases for these attributes need to be better enumerated.
 
 
-## Anchoring (The `anchor` Attribute)
+## Anchoring (the `anchor` Attribute)
 
 A new attribute, `anchor`, should be added for all elements, whose value is an idref of an “anchoring” element. This anchor relationship is used for two behaviors:
 
@@ -411,11 +404,11 @@ This section contains several HTML examples, showing how various UI elements mig
 
 # Other Options We Explored
 
-This section contains mostly older draft ideas, some more and less fleshed out. All of these options were abandoned in favor of the HTML content attribute proposal, due to the "Cons" listed under each section.
+This section contains mostly older draft ideas, some more and less fleshed out. All of these options were abandoned in favor of the [HTML content attribute proposal](#api-shape---html-content-attribute), due to the "Cons" listed under each section.
 
 ## Option: An HTML Content Attribute (OLD version)
 
-This is an older version of an HTML **content attribute** proposal. It uses a lot of Javascript, rather than more prescriptive UI classes, to implement light dismiss and one-at-a-time. As such, this version was abandoned for the current proposal.
+This is an older version of an HTML **content attribute** proposal. It uses a lot of Javascript, rather than more prescriptive UI classes, to implement light dismiss and one-at-a-time. As such, this version was abandoned for the [current proposal](#api-shape---html-content-attribute).
 
 ### API Shape
 
@@ -468,17 +461,14 @@ For at least the `<popup>` use case, developers need to be able to style things 
 
 There is a [general desire](https://github.com/openui/open-ui/issues/342) to receive events indicating that an element has entered or left the top layer via this API. These events can be used, for example, to populate content for a popup just in time before it is shown, or update server data when it closes. Additionally (see the section below), these events could be used to allow the application to prevent or force closing a popup in some circumstances. 
 
-It would seem most natural and powerful to define four events:
-
-
+It would seem most natural and powerful to define two events:
 
 * `entertoplayer`: fired on the element just after it is promoted to the top layer.
 * `exittoplayer`: fired on the element just after it is removed from the top layer.
 
 Both events would use a new TopLayerEvent interface, inheriting from [Event](https://developer.mozilla.org/en-US/docs/Web/API/Event). These events would be typically cancellable, to prevent addition or removal when desired. For some types of transition, e.g. the UA forcibly removing an element from the top layer, the events would simply **not** be cancellable.
 
-
-### It would also seem natural that these events would be fired for `<dialog>` elements and fullscreen elements, as they transition into and out of the top layer.
+It would also seem natural that these events would be fired for `<dialog>` elements and fullscreen elements, as they transition into and out of the top layer.
 
 
 #### Dismiss Behavior
@@ -544,16 +534,14 @@ If a “less Javascripty” interface was desired to expose this behavior, anoth
 }
 ```
 
-
 In this case, when an element matching .popup is promoted to the top layer, anything matching the closeother property’s selector value will be removed from the top layer. This would behave identically to the Javascript entertoplayer listener coded above.
 
-
-### In both of the above examples, any elements removed from the top layer this way will themselves receive a `exittoplayer` event, meaning they can cancel this removal.
+In both of the above examples, any elements removed from the top layer this way will themselves receive a `exittoplayer` event, meaning they can cancel this removal.
 
 
 #### Focus Management
 
-Elements that “go” into the top layer sometimes need to move the focus to that element, and sometimes don’t. For example, a modal `<dialog>` gets automatically focused because a dialog is something that requires immediate focus and attention. On the other hand, a `<tooltip>` doesn’t receive focus at all (and is typically not expected to contain focusable elements). Similarly, a `<toast>` should not receive focus (even if focusable) because it is meant for out-of-band communication of state, and should not interrupt a user’s current action. Additionally, if the top layer element **should **receive immediate focus, there is a question about **which** part of the element gets that initial focus. For example, the element itself could receive focus, or one of its focusable descendants could receive focus first. For these reasons, there need to be mechanisms available for elements to control focus in the appropriate ways. The `<popup>` element proposal provided two ways to modify focus behavior: the `delegatesfocus` and `autofocus` attributes. The `autofocus` attribute is [already a global attribute](https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/autofocus), so it’d just need to be updated to clarify that the autofocus behavior happens for top layer elements right when they’re added to the top layer. The other attribute provided by the `<popup>` proposal,  `delegatesfocus`, either might not be necessary, or might need to be added as a global attribute:
+Elements that “go” into the top layer sometimes need to move the focus to that element, and sometimes don’t. For example, a modal `<dialog>` gets automatically focused because a dialog is something that requires immediate focus and attention. On the other hand, a `<tooltip>` doesn’t receive focus at all (and is typically not expected to contain focusable elements). Similarly, a `<toast>` should not receive focus (even if focusable) because it is meant for out-of-band communication of state, and should not interrupt a user’s current action. Additionally, if the top layer element **should** receive immediate focus, there is a question about **which** part of the element gets that initial focus. For example, the element itself could receive focus, or one of its focusable descendants could receive focus first. For these reasons, there need to be mechanisms available for elements to control focus in the appropriate ways. The `<popup>` element proposal provided two ways to modify focus behavior: the `delegatesfocus` and `autofocus` attributes. The `autofocus` attribute is [already a global attribute](https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/autofocus), so it’d just need to be updated to clarify that the autofocus behavior happens for top layer elements right when they’re added to the top layer. The other attribute provided by the `<popup>` proposal,  `delegatesfocus`, either might not be necessary, or might need to be added as a global attribute:
 
 
 
@@ -974,7 +962,7 @@ This table documents what **currently happens** in the Chromium rendering engine
    </td>
    <td>Modal dialog
    </td>
-   <td>`<popup>` element
+   <td>`&lt;popup>` element
    </td>
   </tr>
   <tr>
@@ -998,7 +986,7 @@ This table documents what **currently happens** in the Chromium rendering engine
    </td>
   </tr>
   <tr>
-   <td>`<popup>` element
+   <td>`&lt;popup>` element
    </td>
    <td>Full screen is displayed on top of popup, both are in the top layer. ESC closes full screen, second ESC closes popup.
    </td>
@@ -1014,24 +1002,6 @@ Note that the current fullscreen and `<dialog>` behavior does not prevent both t
 
 Generally, [per spec](https://fullscreen.spec.whatwg.org/#new-stacking-layer), when there are multiple elements in the top layer, they are rendered in the order they were added to the top layer set. Each of these elements forms a stacking context, meaning z-index cannot be used to change this painting order.
 
-
-## Other Top Layer Element Types
-
-In addition to the element types described in the section above, there are a number of other UX patterns that deserve some attention. Bo Cupp put together [this list](https://docs.google.com/document/d/1I8Y7quk_Noim3GQ1ByhDWg1Jaj58OSE7wv2XUBHkkIU/edit#) containing some examples. It is interesting to examine a few of those, particularly Tooltip and Async, since those have different behavioral expectations about how they share the top layer.
-
-
-### Tooltip
-
-A tooltip is typically triggered/opened by hovering over an element for a prescribed delay period. It is dismissed by several things, including a pure delay, hitting ESC, moving the mouse outside the element, clicking on or focusing other elements (including the trigger element), etc. Tooltips cannot be focused and do not provide tab stops.
-
-Importantly for this discussion, when a (top-layer) tooltip is shown, **other top-layer elements should** **remain visible**. This is because a tooltip is very transient UI that should not affect the remainder of the page state. Only one tooltip should be visible at a time: when one tooltip opens, all other tooltips should be closed. Nested tooltips (tooltips on tooltips) are technically possible but not common.
-
-
-### Async
-
-Async notifications (sometimes called “toasts”) are top-layer elements that are (typically) triggered asynchronously, such as via server-push or a timer. They may also be dismissed without user interaction, such as after a delay.
-
-**Async notifications do not dismiss any other top layer elements.** They also do not dismiss each other, and instead “stack” somehow in the UI. They can be dismissed either explicitly by the user (one at a time, or all together), or by a timer.
 
 
 # Shadow DOM
