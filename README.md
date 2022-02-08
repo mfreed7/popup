@@ -22,16 +22,16 @@
   - [Accessibility / Semantics](#accessibility--semantics)
   - [Example Use Cases](#example-use-cases)
   - [Pros and Cons](#pros-and-cons)
+- [Additional Considerations](#additional-considerations)
+  - [Current Top Layer Behavior](#current-top-layer-behavior)
+  - [Shadow DOM](#shadow-dom)
+  - [Exceeding the Frame Bounds](#exceeding-the-frame-bounds)
+  - [Eventual Single-Purpose Elements](#eventual-single-purpose-elements)
 - [Other Alternatives Considered](#other-alternatives-considered)
-  - [Option: An HTML Content Attribute (OLD version)](#option-an-html-content-attribute-old-version)
-  - [Option: Dedicated `<popup>` Element](#option-dedicated-popup-element)
-  - [Option: CSS Property](#option-css-property)
-  - [Option: JavaScript API](#option-javascript-api)
-- [Interactions Between Top Layer Elements](#interactions-between-top-layer-elements)
-  - [Current Behavior](#current-behavior)
-- [Shadow DOM](#shadow-dom)
-- [Exceeding the Frame Bounds](#exceeding-the-frame-bounds)
-- [Eventual Single-Purpose Elements](#eventual-single-purpose-elements)
+  - [Alternative: An HTML Content Attribute (OLD version)](#alternative-an-html-content-attribute-old-version)
+  - [Alternative: Dedicated `<popup>` Element](#alternative-dedicated-popup-element)
+  - [Alternative: CSS Property](#alternative-css-property)
+  - [Alternative: JavaScript API](#alternative-javascript-api)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -63,6 +63,8 @@ See the [original `<popup>` element explainer](https://open-ui.org/components/po
 
 
 # API Shape
+
+This section lays out the full details of this proposal. If you'd prefer, you can **[skip to the examples section](#example-use-cases) to see the code**.
 
 ## HTML Content Attribute
 
@@ -376,7 +378,7 @@ This section contains several HTML examples, showing how various UI elements mig
 ### Pros
 
 * Solves all of the goals of the popup effort.
-* Solves the [Accessibility/Semantics problem](#option-dedicated-popup-element).
+* Solves the [Accessibility/Semantics problem](#alternative-dedicated-popup-element).
 * Allows the UA to manage the top layer, via addition and removal of the `hidden` attribute.
 * Works on **any element**.
 * Still good DX: it should be easy for developers to understand the meaning of an attribute on an element that is in the top layer.
@@ -386,6 +388,62 @@ This section contains several HTML examples, showing how various UI elements mig
 * In some use cases (as [articulated here](https://github.com/openui/open-ui/issues/417#issuecomment-996890656)), the use of a content attribute might cause some DX issues. For example, in the `<selectmenu>` application, we might want to make in-page vs. popup presentation an option. To achieve that via a `popup` HTML attribute, there might need to be some mirroring of attributes from the light-dom `<selectmenu>` element to internal shadow dom container elements, which makes the shadow dom replacement feature of `<selectmenu>` a bit more complicated to both use and implement.
 
 
+# Additional Considerations
+
+
+## Current Top Layer Behavior
+
+There are several “ways” that an element can currently make it to the top layer:
+
+* The full screen API (element.requestFullScreen()).
+* The `<dialog>` element, shown modally (dialog.showModal()).
+* Elements using the prototype `<popup>` element implementation in Chromium.
+
+This table documents what **currently happens** in the Chromium rendering engine, which is the only one to support any top-layer elements besides fullscreen. In particular, it documents the current `<popup>` element prototype, which is just one possibility for the general “popup” API being described here.
+
+**<span style="text-decoration:underline;">Chromium 99.x behavior</span>**
+
+
+<table>
+  <tr><td></td><td colspan="4" >Second Element</td></tr>
+  <tr><td rowspan="4" > First Element</td><td></td><td>Full screen</td><td>Modal dialog</td><td>`&lt;popup>` element</td></tr>
+  <tr><td>Full screen</td><td>The second fullscreen element kicks the first one out of the top layer. ESC closes the second fullscreen element.</td><td>Full screen stays visible, modal is displayed above fullscreen. ESC closes fullscreen <strong>first</strong>, second ESC closes dialog (<strong>backwards</strong>).</td><td>Full screen stays visible, popup is displayed above fullscreen. ESC closes fullscreen <strong>first</strong>, second ESC closes popup (<strong>backwards</strong>).</td></tr>
+  <tr><td>Modal dialog</td><td>Full screen is displayed on top of modal, both are in the top layer. ESC closes full screen, second ESC closes dialog.</td><td>Both dialogs are shown, first under second. First ESC closes second dialog, then first.</td><td>Both are shown, dialog is under popup. Hitting ESC once closes <strong>both</strong> of them.</td></tr>
+  <tr><td>`&lt;popup>` element</td><td>Full screen is displayed on top of popup, both are in the top layer. ESC closes full screen, second ESC closes popup.</td><td>The dialog opening dismisses the popup. Hitting ESC closes the dialog.</td><td>The second popup dismisses the first (assuming they’re not “ancestors” via DOM tree or anchor/popup attributes). Hitting ESC closes the popup.</td></tr>
+</table>
+
+
+Note that the current fullscreen and `<dialog>` behavior does not prevent both types of elements from being in the top layer at once. In other words, there is currently no “one-at-a-time” managment of the top layer, other than the handling of the ESC key. In some cases the keyboard interaction pattern can be a bit confusing. For example, in several cases, hitting ESC first closes the element on the **bottom**, and a second ESC closes the element on the “top”. This is on purpose, for security reasons ([specified here](https://wicg.github.io/close-watcher/#close-signal-steps)): the ESC key must always close the fullscreen element and should not be cancellable.
+
+Generally, [per spec](https://fullscreen.spec.whatwg.org/#new-stacking-layer), when there are multiple elements in the top layer, they are rendered in the order they were added to the top layer set. Each of these elements forms a stacking context, meaning z-index cannot be used to change this painting order.
+
+
+
+## Shadow DOM
+
+Some thought needs to be given to what happens if an element within a shadow root uses this API to move a shadow-DOM-contained element to the top layer. One use case of such an element would be a custom element that wraps a popup type UI element, such as a `<my-tooltip>`. Should it be “ok” for a shadow element (potentially inside even a closed shadow root) to be promoted to the top layer like this? Or should it be a requirement that the light-DOM element (e.g. the `<my-tooltip>` element) itself be the one to get promoted to the top layer?
+
+Since the rendering output from a shadow host **is already** its shadow DOM content only, it would seem totally appropriate for shadow-contained elements to be allowed to move to the top layer, since the top layer is very similar to z-index and is just a layout convenience. It also seems considerably more ergonomic to allow this, rather than requiring the top-layer API be used at the highest light-DOM element containing the desired content. There are even cases where this wouldn’t make sense or be possible, such as a web component containing the entire page, `<my-app>`. In that case, it wouldn’t be possible for anything contained in the app to use the top layer API.
+
+It would seem, from the discussion above, that any element, including shadow-contained elements, **should be allowed to use this API**.
+
+## Exceeding the Frame Bounds
+
+Allowing a popup/top-layer element to exceed the bounds of its containing frame poses a serious security risk: such an element could spoof browser UI or containing page content. While the [original `<popup>` proposal](https://open-ui.org/components/popup.research.explainer#goals) did not discuss this issue, the [`<selectmenu>` proposal](https://github.com/MicrosoftEdge/MSEdgeExplainers/blob/main/ControlUICustomization/explainer.md#security) does have a specific section at least mentioning this issue. While it is possible to allow exceeding frame bounds in some cases, e.g. with the fullscreen API, great care must be taken in these cases to ensure user safety. It would seem difficult to allow an arbitrary element to exceed frame bounds using this (popup/top-layer) proposal. But perhaps there are safe ways to allow this behavior. More brainstorming is needed.
+
+In the interim, two use counters were added to measure how often this type of behavior might be needed. They are approximations, as they merely measure the total number of times a “popup” is shown (including `<select>` popup, `<input type=color>` color picker, and `<input type=date/etc>` date/time picker), and the total number of times those popups exceed the owner frame bounds. Data can be found here:
+
+
+
+* Total popups shown: [0.7% of page loads](https://chromestatus.com/metrics/feature/timeline/popularity/3298)
+* Popups appeared outside frame bounds: [0.08% of page loads](https://chromestatus.com/metrics/feature/timeline/popularity/3299)
+
+So about 11% of all popups currently exceed their owner frame bounds. That should be considered a rough upper bound, as it is possible that some of those popups **could** have fit within their frame if an attempt was made to do so, but they just happened to exceed the bounds anyway.
+
+
+## Eventual Single-Purpose Elements
+
+There might come a time, sooner or later, where a new HTML element is desired which combines strong semantics and purpose-built behaviors. For example, a `<tooltip>` or `<listbox>` element. Those elements could be relatively easily built via the APIs proposed in this document. For example, a `<tooltip>` element could be defined to have `role=tooltip` and `popup=hint`, and therefore re-use this Popup API for always-on-top rendering, one-at-a-time management, and light dismiss. In other words, these new elements could be *explained* in terms of the lower-level primitives being proposed for this API.
 
 
 # Other Alternatives Considered
@@ -400,7 +458,7 @@ To achieve the [goals](#goals) of this project, a number of approaches could hav
 Each of these options is significantly different from the others. To properly evaluate them, each option was fleshed out in some detail. The sub-sections below walk through each alternative, and discuss the shortcomings. After exploring these options, the [HTML content attribute approach](#html-content-attribute) seems to be the best overall.
 
 
-## Option: An HTML Content Attribute (OLD version)
+## Alternative: An HTML Content Attribute (OLD version)
 
 This is an older version of an HTML content attribute proposal. The primary difference is that this version leaves all of the details of one-at-a-time and light dismiss behavior to the developer, to implement in Javascript. There seem to be many footguns inherent in this approach, as compared to the more [prescriptive UI classes](#classes-of-ui---dismiss-behavior-and-interactions) presented above. As such, this version was abandoned for the [current proposal](#html-content-attribute).
 
@@ -597,7 +655,7 @@ Since the `toplayer` content attribute can be applied to any element, and only i
 
 
 
-* Solves the [Accessibility/Semantics problem](#option-dedicated-popup-element).
+* Solves the [Accessibility/Semantics problem](#alternative-dedicated-popup-element).
 * Solves the [“removal from top layer” problem](#dismiss-behavior-2) inherent in the CSS solution. When the element is removed from the top layer, the UA can also remove the content attribute.
 * Solves the [issue with the popup declarative attribute](#declarative-triggering-the-popup-attribute-1) in the CSS solution.
 * Solves the [potential display ordering issues](#display-ordering-and-the-initiallyopen-attribute-1) raised by the CSS solution.
@@ -609,7 +667,7 @@ Since the `toplayer` content attribute can be applied to any element, and only i
 * In some use cases (as [articulated here](https://github.com/openui/open-ui/issues/417#issuecomment-996890656)), the use of a content attribute might cause some DX issues. For example, in the `<selectmenu>` application, we might want to make in-page vs. popup presentation an option. To achieve that via a `toplayer` HTML attribute, there might need to be some mirroring of attributes from the light-dom `<selectmenu>` element to internal shadow dom container elements, which makes the shadow dom replacement feature of `<selectmenu>` a bit more complicated to both use and implement.
 
 
-## Option: Dedicated `<popup>` Element
+## Alternative: Dedicated `<popup>` Element
 
 The initial [proposal](https://open-ui.org/components/popup.research.explainer) describes, in detail, the dedicated `<popup>` element approach. However, in several discussions ([1](https://github.com/w3ctag/design-reviews/issues/680#issuecomment-943472331), [2](https://github.com/openui/open-ui/issues/410), [3](https://github.com/openui/open-ui/issues/417#issuecomment-985541825), and more) the OpenUI community brought up several accessibility concerns:
 
@@ -635,12 +693,12 @@ Finally, the current `<popup>` element proposal does not support the Hint or Asy
 
 #### Cons
 
-* Unclear that there is a solution to the [Accessibility/Semantics problem](#option-dedicated-popup-element).
+* Unclear that there is a solution to the [Accessibility/Semantics problem](#alternative-dedicated-popup-element).
 * Ties the top-layer presentation to the HTML structure. I.e. to get something to be top-layer, it must be “wrapped” in a `<popup>` element.
 * Does not support more general use cases, such as Hint and Async. Those would require other new elements to be proposed.
 
 
-## Option: CSS Property
+## Alternative: CSS Property
 
 This approach, on its face, seems very simple and elegant. However, there are two very significant downsides to this approach:
  * A “dual class” top layer will need to be created, with `<dialog>` and fullscreen always above “developer” top layer elements. That **precludes using a popup** on top of a dialog/fullscreen.
@@ -774,7 +832,7 @@ Importantly, as the above proposals are entirely CSS-based presentational proper
 
 
 
-* Solves the [Accessibility/Semantics problem](#option-dedicated-popup-element).
+* Solves the [Accessibility/Semantics problem](#alternative-dedicated-popup-element).
 * Good DX: CSS is easy to understand and use.
 * Works on any element.
 
@@ -785,7 +843,7 @@ Importantly, as the above proposals are entirely CSS-based presentational proper
 * Unclear how to implement the `popup` declarative activation feature.
 
 
-## Option: JavaScript API
+## Alternative: JavaScript API
 
 Generally, a JavaScript API is less preferable than an HTML/CSS based solution. And specifically, this approach suffers some of the same problems that the CSS approach has, namely that most of the one-at-a-time and light dismiss behavior is completely left to the developer to get right. Because this approach is more difficult to understand and code correctly, and doesn't offer any advantages relative to the HTML attribute solution, this approach was not used.
 
@@ -905,111 +963,6 @@ It is possible that the `popup` declarative attribute gets around many/most of t
 
 #### Cons
 
-
-
 * Javascript based APIs are less desirable than something based on HTML or CSS.
+* Many footguns.
 
-
-# Interactions Between Top Layer Elements
-
-There are several “ways” that an element can make it to the top layer:
-
-
-
-* The full screen API (element.requestFullScreen()).
-* The `<dialog>` element, shown modally (dialog.showModal()).
-* Elements using the API proposed in this document (“popups”).
-
-Since the top layer is managed by the UA, there should be rules for precedence and behavior when more than one such element occupies the top layer or requests access to the top layer. For example, if a modal dialog is showing, and an element requests full screen access, what should happen to the modal dialog? Leave it open (underneath the fullscreen element)? Or close it before promoting the element to fullscreen?
-
-
-## Current Behavior
-
-This table documents what **currently happens** in the Chromium rendering engine, which is the only one to support any top-layer elements besides fullscreen. In particular, it documents the current `<popup>` prototype, which is just one possibility for the general “popup” API being described here.
-
-**<span style="text-decoration:underline;">Chromium 99.x behavior</span>**
-
-
-<table>
-  <tr>
-   <td>
-   </td>
-   <td colspan="4" >Second Element
-   </td>
-  </tr>
-  <tr>
-   <td rowspan="4" > First Element</td>
-   <td>
-   </td>
-   <td>Full screen
-   </td>
-   <td>Modal dialog
-   </td>
-   <td>`&lt;popup>` element
-   </td>
-  </tr>
-  <tr>
-   <td>Full screen
-   </td>
-   <td>The second fullscreen element kicks the first one out of the top layer. ESC closes the second fullscreen element.
-   </td>
-   <td>Full screen stays visible, modal is displayed above fullscreen. ESC closes fullscreen <strong>first</strong>, second ESC closes dialog (<strong>backwards</strong>).
-   </td>
-   <td>Full screen stays visible, popup is displayed above fullscreen. ESC closes fullscreen <strong>first</strong>, second ESC closes popup (<strong>backwards</strong>).
-   </td>
-  </tr>
-  <tr>
-   <td>Modal dialog
-   </td>
-   <td>Full screen is displayed on top of modal, both are in the top layer. ESC closes full screen, second ESC closes dialog.
-   </td>
-   <td>Both dialogs are shown, first under second. First ESC closes second dialog, then first.
-   </td>
-   <td>Both are shown, dialog is under popup. Hitting ESC once closes <strong>both</strong> of them.
-   </td>
-  </tr>
-  <tr>
-   <td>`&lt;popup>` element
-   </td>
-   <td>Full screen is displayed on top of popup, both are in the top layer. ESC closes full screen, second ESC closes popup.
-   </td>
-   <td>The dialog opening dismisses the popup. Hitting ESC closes the dialog.
-   </td>
-   <td>The second popup dismisses the first (assuming they’re not “ancestors” via DOM tree or anchor/popup attributes). Hitting ESC closes the popup.
-   </td>
-  </tr>
-</table>
-
-
-Note that the current fullscreen and `<dialog>` behavior does not prevent both types of elements from being in the top layer at once. In other words, there is currently no “one-at-a-time” managment of the top layer, other than the handling of the ESC key. In some cases the keyboard interaction pattern can be a bit confusing. For example, in several cases (the ones highlighted in red), hitting ESC first closes the element on the **bottom**, and a second ESC closes the element on the “top”. This is on purpose, for security reasons ([specified here](https://wicg.github.io/close-watcher/#close-signal-steps)): the ESC key must always close the fullscreen element and should not be cancellable.
-
-Generally, [per spec](https://fullscreen.spec.whatwg.org/#new-stacking-layer), when there are multiple elements in the top layer, they are rendered in the order they were added to the top layer set. Each of these elements forms a stacking context, meaning z-index cannot be used to change this painting order.
-
-
-
-# Shadow DOM
-
-Some thought needs to be given to what happens if an element within a shadow root uses this API to move a shadow-DOM-contained element to the top layer. One use case of such an element would be a custom element that wraps a popup type UI element, such as a `<my-tooltip>`. Should it be “ok” for a shadow element (potentially inside even a closed shadow root) to be promoted to the top layer like this? Or should it be a requirement that the light-DOM element (e.g. the `<my-tooltip>` element) itself be the one to get promoted to the top layer?
-
-Since the rendering output from a shadow host **is already** its shadow DOM content only, it would seem totally appropriate for shadow-contained elements to be allowed to move to the top layer, since the top layer is very similar to z-index and is just a layout convenience. It also seems considerably more ergonomic to allow this, rather than requiring the top-layer API be used at the highest light-DOM element containing the desired content. There are even cases where this wouldn’t make sense or be possible, such as a web component containing the entire page, `<my-app>`. In that case, it wouldn’t be possible for anything contained in the app to use the top layer API.
-
-This should get additional brainstorming. 
-
-
-# Exceeding the Frame Bounds
-
-Allowing a popup/top-layer element to exceed the bounds of its containing frame poses a serious security risk: such an element could spoof browser UI or containing page content. While the [original `<popup>` proposal](https://open-ui.org/components/popup.research.explainer#goals) did not discuss this issue, the [`<selectmenu>` proposal](https://github.com/MicrosoftEdge/MSEdgeExplainers/blob/main/ControlUICustomization/explainer.md#security) does have a specific section at least mentioning this issue. While it is possible to allow exceeding frame bounds in some cases, e.g. with the fullscreen API, great care must be taken in these cases to ensure user safety. It would seem difficult to allow an arbitrary element to exceed frame bounds using this (popup/top-layer) proposal. But perhaps there are safe ways to allow this behavior. More brainstorming is needed.
-
-In the interim, two use counters were added to measure how often this type of behavior might be needed. They are approximations, as they merely measure the total number of times a “popup” is shown (including `<select>` popup, `<input type=color>` color picker, and `<input type=date/etc>` date/time picker), and the total number of times those popups exceed the owner frame bounds. Data can be found here:
-
-
-
-* Total popups shown: [0.7% of page loads](https://chromestatus.com/metrics/feature/timeline/popularity/3298)
-* Popups appeared outside frame bounds: [0.08% of page loads](https://chromestatus.com/metrics/feature/timeline/popularity/3299)
-
-So about 11% of all popups currently exceed their owner frame bounds. That should be considered a rough upper bound, as it is possible that some of those popups **could** have fit within their frame if an attempt was made to do so, but they just happened to exceed the bounds anyway.
-
-
-# Eventual Single-Purpose Elements
-
-There might come a time, sooner or later, where a new HTML element is desired which combines strong semantics and purpose-built behaviors. For example, a `<tooltip>` or `<listbox>` element. Those elements could be relatively easily built via the APIs proposed in this document. For example, a `<tooltip>` element could be defined to have `role=tooltip` and `popup=hint`, and therefore re-use this Popup API for always-on-top rendering, one-at-a-time management, and light dismiss. In other words, these new elements could be *explained* in terms of the lower-level primitives being proposed for this API.
