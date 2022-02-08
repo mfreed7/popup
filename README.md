@@ -61,6 +61,8 @@ Here are the goals for this API (borrowed liberally from the [`<popup>` element 
 
 See the [original `<popup>` element explainer](https://open-ui.org/components/popup.research.explainer), and also the comments on [Issue 410](https://github.com/openui/open-ui/issues/410) and [Issue 417](https://github.com/openui/open-ui/issues/417). See also [this CSSWG discussion](https://github.com/w3c/csswg-drafts/issues/6965) which has mostly been about a CSS alternative for top layer.
 
+This new proposal is discussed on [Issue 455](https://github.com/openui/open-ui/issues/455).
+
 
 # API Shape
 
