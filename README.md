@@ -1,6 +1,6 @@
 # Popup / Top-Layer UI Functionality
 
-- @mfreed7, @scottaohara, @BoCupp-Microsoft, @domenic, @gregwhitworth, @chrishtr, @dandclark, @una
+- @mfreed7, @scottaohara, @BoCupp-Microsoft, @domenic, @gregwhitworth, @chrishtr, @dandclark, @una, @smhigley
 - February 7, 2022
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
@@ -77,9 +77,9 @@ To achieve the [goals](https://open-ui.org/components/popup.research.explainer#g
 After significant discussion, it seems that the HTML content attribute might be the best solution. The other options are discussed in the - [Other Options section](#other-options-we-explored) of this document. Here is a quick summary of the primary reason each is not an optimal solution:
 
 
-* **A dedicated `<popup>` element**: There is no single semantic or AX role that can be used with a “generic” popup element. It will therefore cause issues for AT users. Essentially, the presentation and semantics are not sufficiently/correct separated with this solution.
+* **A dedicated `<popup>` element**: There is no single semantic or AX role that will consistently apply to a “generic” popup element. It would therefore cause issues for people who use assistive technologies, as it would either introduce unwanted semantics, or lack necessary semantics – requiring authors use ARIA to ensure the element was exposed correctly. Essentially, the presentation and semantics are not sufficiently/correct separated with this solution.
 * **A CSS property**: There are two problems. One is that a “dual class” top layer will need to be created, with `<dialog>` and fullscreen always above “developer” top layer elements. That precludes using a popup on top of a dialog/fullscreen. The other problem is that light dismiss and one-at-a-time behavior cannot be built into a CSS property.
-* **A Javascript API**: primarily, a JS based solution is less desirable than HTML/CSS solutions. Too many things are left to the developer, leaving many potential footguns.
+* **A JavaScript API**: primarily, a JS based solution is less desirable than HTML/CSS solutions. Too many things are left to the developer, leaving many potential footguns.
 
 
 ## API Shape - HTML Content Attribute
@@ -115,7 +115,7 @@ A common design pattern is to have an activating element, such as a `<button>`, 
 
 When the button is activated, the UA will remove the `hidden` attribute value from the `<div id=mypopup>` element, causing it to be rendered top-layer. In this way, no Javascript will be necessary for this use case.
 
-When the `triggerpopup` attribute is applied to an activating element, the UA will automatically add `aria-haspopup=true` to that element. In this way, this use pattern will be accessible by default.
+When the `triggerpopup` attribute is applied to an activating element, the UA may automatically map this attribute to an appropriate `aria-*` attribute, such as `aria-haspopup`, `aria-describedby` or `aria-expanded`. There will need to be further discussion with the ARIA working group to determine the exact ARIA semantics, if any, are necessary.
 
 
 ## Dismiss Behavior
@@ -139,6 +139,7 @@ The rules the UA uses to manage these interactions depends on the element types,
 
 * Popup (**`popup=popup`**)
     * When opened, force-closes other popups and hints. An exception is ancestor popups, defined via DOM hierarchy, anchor attribute, or triggerpopup attribute.
+    * It would generally be expected that a popup of this type would either receive focus, or a descendant element would receive focus when invoked.
     * Dismisses on Esc, click outside, or blur.
 * Hint/Tooltip (**`popup=hint`**)
     * When opened, force-closes only other hints, but leaves all other popup types open.
@@ -301,12 +302,14 @@ It is possible for an HTML document to contain multiple elements with `popup=pop
 
 ## Accessibility / Semantics
 
-Since the `toplayer` content attribute can be applied to any element, and only impacts the element’s presentation (top layer vs not top layer), this should not have **any semantic or accessibility impact**. I.e. the element with the `toplayer` attribute will keep its existing semantics and AOM representation.
+Since the `toplayer` content attribute can be applied to any element, and only impacts the element’s presentation (top layer vs not top layer), this should not have **any semantic or accessibility impact**. I.e., the element with the `toplayer` attribute will keep its existing semantics and AOM representation. In the event an author needs to extend or modify a particular element's ARIA semantics, this may be done in accordance to existing allowances of [ARIA in HTML](https://w3c.github.io/html-aria/).
 
 
 ## Example Use Cases
 
 This section contains several HTML examples, showing how various UI elements might be constructed using this API.
+
+**Note:** these examples are for demonstrative purposes of how to use the `triggerpopup` and `popup` attributes. They may not represent all necessary HTML, ARIA or JavaScript features needed to fully create such components.
 
 
 ### Generic Popup (Date Picker)
