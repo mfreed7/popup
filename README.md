@@ -10,8 +10,8 @@
 - [Background](#background)
   - [Goals](#goals)
   - [See Also](#see-also)
-- [The Options](#the-options)
-  - [API Shape - HTML Content Attribute](#api-shape---html-content-attribute)
+- [API Shape](#api-shape)
+  - [HTML Content Attribute](#html-content-attribute)
   - [Declarative Trigger (the `triggerpopup` attribute)](#declarative-trigger-the-triggerpopup-attribute)
   - [Dismiss Behavior](#dismiss-behavior)
   - [Classes of UI - Dismiss Behavior and Interactions](#classes-of-ui---dismiss-behavior-and-interactions)
@@ -22,11 +22,11 @@
   - [Accessibility / Semantics](#accessibility--semantics)
   - [Example Use Cases](#example-use-cases)
   - [Pros and Cons](#pros-and-cons)
-- [Other Options We Explored](#other-options-we-explored)
+- [Other Alternatives Considered](#other-alternatives-considered)
   - [Option: An HTML Content Attribute (OLD version)](#option-an-html-content-attribute-old-version)
   - [Option: Dedicated `<popup>` Element](#option-dedicated-popup-element)
   - [Option: CSS Property](#option-css-property)
-  - [Option: Javascript API](#option-javascript-api)
+  - [Option: JavaScript API](#option-javascript-api)
 - [Interactions Between Top Layer Elements](#interactions-between-top-layer-elements)
   - [Current Behavior](#current-behavior)
 - [Shadow DOM](#shadow-dom)
@@ -397,12 +397,12 @@ To achieve the [goals](#goals) of this project, a number of approaches could hav
 * A CSS property.
 * A Javascript API.
 
-Each of these options is significantly different from the others. To properly evaluate them, each option was fleshed out in some detail. The sub-sections below walk through each alternative, and discuss the shortcomings. After exploring these options, the [HTML content attribute approach](#api-shape---html-content-attribute) seems to be the best overall.
+Each of these options is significantly different from the others. To properly evaluate them, each option was fleshed out in some detail. The sub-sections below walk through each alternative, and discuss the shortcomings. After exploring these options, the [HTML content attribute approach](#html-content-attribute) seems to be the best overall.
 
 
 ## Option: An HTML Content Attribute (OLD version)
 
-This is an older version of an HTML content attribute proposal. The primary difference is that this version leaves all of the details of one-at-a-time and light dismiss behavior to the developer, to implement in Javascript. There seem to be many footguns inherent in this approach, as compared to the more [prescriptive UI classes](#classes-of-ui---dismiss-behavior-and-interactions) presented above. As such, this version was abandoned for the [current proposal](#api-shape---html-content-attribute).
+This is an older version of an HTML content attribute proposal. The primary difference is that this version leaves all of the details of one-at-a-time and light dismiss behavior to the developer, to implement in Javascript. There seem to be many footguns inherent in this approach, as compared to the more [prescriptive UI classes](#classes-of-ui---dismiss-behavior-and-interactions) presented above. As such, this version was abandoned for the [current proposal](#html-content-attribute).
 
 ### API Shape
 
@@ -646,7 +646,7 @@ This approach, on its face, seems very simple and elegant. However, there are tw
  * A “dual class” top layer will need to be created, with `<dialog>` and fullscreen always above “developer” top layer elements. That **precludes using a popup** on top of a dialog/fullscreen.
  * In this approach, light dismiss and one-at-a-time behavior cannot be built into a CSS property, and **must be implemented in JavaScript**.
 
-For these two reasons, this approach was abandoned in favor of the [current HTML attribute proposal](#api-shape---html-content-attribute).
+For these two reasons, this approach was abandoned in favor of the [current HTML attribute proposal](#html-content-attribute).
 
 
 ### API Shape
