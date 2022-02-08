@@ -302,7 +302,7 @@ It is possible for an HTML document to contain multiple elements with `popup=pop
 
 ## Accessibility / Semantics
 
-Since the `toplayer` content attribute can be applied to any element, and only impacts the element’s presentation (top layer vs not top layer), this should not have **any semantic or accessibility impact**. I.e., the element with the `toplayer` attribute will keep its existing semantics and AOM representation. In the event an author needs to extend or modify a particular element's ARIA semantics, this may be done in accordance to existing allowances of [ARIA in HTML](https://w3c.github.io/html-aria/).
+Since the `popup` content attribute can be applied to any element, and only impacts the element’s presentation (top layer vs not top layer), this should not have **any semantic or accessibility impact**. I.e., the element with the `popup` attribute will keep its existing semantics and AOM representation. In the event an author needs to extend or modify a particular element's ARIA semantics, this may be done in accordance to existing allowances of [ARIA in HTML](https://w3c.github.io/html-aria/).
 
 
 ## Example Use Cases
@@ -401,7 +401,7 @@ This section contains several HTML examples, showing how various UI elements mig
 
 ### Cons
 
-* In some use cases (as [articulated here](https://github.com/openui/open-ui/issues/417#issuecomment-996890656)), the use of a content attribute might cause some DX issues. For example, in the `<selectmenu>` application, we might want to make in-page vs. popup presentation an option. To achieve that via a `toplayer` HTML attribute, there might need to be some mirroring of attributes from the light-dom `<selectmenu>` element to internal shadow dom container elements, which makes the shadow dom replacement feature of `<selectmenu>` a bit more complicated to both use and implement.
+* In some use cases (as [articulated here](https://github.com/openui/open-ui/issues/417#issuecomment-996890656)), the use of a content attribute might cause some DX issues. For example, in the `<selectmenu>` application, we might want to make in-page vs. popup presentation an option. To achieve that via a `popup` HTML attribute, there might need to be some mirroring of attributes from the light-dom `<selectmenu>` element to internal shadow dom container elements, which makes the shadow dom replacement feature of `<selectmenu>` a bit more complicated to both use and implement.
 
 
 
