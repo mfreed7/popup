@@ -1,6 +1,6 @@
 # Popup / Top-Layer UI Functionality
 
-- [@mfreed7](https://github.com/mfreed7), [@scottaohara](https://github.com/@scottaohara), [@BoCupp-Microsoft](https://github.com/@BoCupp-Microsoft), [@domenic](https://github.com/@domenic), [@gregwhitworth](https://github.com/@gregwhitworth), [@chrishtr](https://github.com/@chrishtr), [@dandclark](https://github.com/@dandclark), [@una](https://github.com/@una), [@smhigley](https://github.com/@smhigley)
+- [@mfreed7](https://github.com/mfreed7), [@scottaohara](https://github.com/scottaohara), [@BoCupp-Microsoft](https://github.com/BoCupp-Microsoft), [@domenic](https://github.com/domenic), [@gregwhitworth](https://github.com/gregwhitworth), [@chrishtr](https://github.com/chrishtr), [@dandclark](https://github.com/dandclark), [@una](https://github.com/una), [@smhigley](https://github.com/smhigley), [@aleventhal](https://github.com/aleventhal)
 - February 15, 2022
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
