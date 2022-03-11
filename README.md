@@ -72,28 +72,65 @@ A new content attribute, **`popup`**, controls both the top layer status and the
 * **`popup=hint`** - A top layer element following “Hint” dismiss behaviors (see below).
 * **`popup=async`** - A top layer element following “Async” dismiss behaviors (see below).
 
-When a popup is visible, the `open` attribute is used to indicate this status. For example:
+So this markup represents popup content:
 
-* `<div popup=popup>` - A popup that is not yet showing. It will be set to `visibility:hidden` by the UA stylesheet, and not rendered.
-* `<div popup=popup open>` - The same popup, now visible and top-layer.
+```html
+<div popup=popup>I am a popup</div>
+```
 
-It might also be possible to specify two additional values for the `popup` attribute, for modal dialogs and fullscreen elements, such that this attribute could be used to control **all** top layer element types. This would need further exploration. If this approach is **not** taken, then there might need to be restrictions placed on when the `popup` attribute can be used. For example, it should be illegal to apply `popup=popup` to an already-modal `<dialog>`.
+As written above, the `<div>` will be rendered `visibility:hidden` by the UA stylesheet, meaning it will not be shown when the page is loaded. To show the popup, one of several methods can be used:
+
+1. Use [the `triggerpopup` attribute](#declarative-trigger-the-triggerpopup-attribute) on an activating element.
+2. Use [the `initiallyopen` attribute](#page-load-trigger-the-initiallyopen-attribute) on the popup element.
+3. Use [the `showPopup()` method](#javascript-trigger) on the popup element.
+
+
+
+In addition to the three proposed values (`popup`, `hint`, `async`) for the `popup` attribute, it might also be possible to specify two additional values to be used for modal dialogs and fullscreen elements. In that case, this attribute could be used to control **all** top layer element types. This would need further exploration. If this approach is **not** taken, then there might need to be restrictions placed on when the `popup` attribute can be used. For example, it should be illegal to apply `popup=popup` to an already-modal `<dialog>`.
+
+
+## Javascript Trigger
+
+To show (and hide) the popup via Javascript, two new methods will be added to HTMLElement:
+
+```javascript
+const popup = document.querySelector('[popup]');
+popup.showPopup(); // Show the popup
+popup.hidePopup(); // Hide a visible popup
+```
+
+Calling `showPopup()` on an element that has a valid value for the `popup` attribute will cause the UA to remove the `visibility:hidden` rule from the `<div id=mypopup>` element and move it to the top layer. If this method is called on an element that does not have a valid value for `popup`, nothing will happen.
+
+Calling `hidePopup()` on a showing popup will remove it from the top layer, and re-apply `visibility:hidden`.
 
 
 ## Declarative Trigger (the `triggerpopup` attribute)
 
-A common design pattern is to have an activating element, such as a `<button>`, which makes a popup visible. To facilitate this pattern, another content attribute, `triggerpopup`, will also be added. This attribute's value should be the idref of another element:
-
+A common design pattern is to have an activating element, such as a `<button>`, which makes a popup visible. To facilitate this pattern, and avoid the need for Javascript in this common case, another content attribute, `triggerpopup`, will also be added. This attribute's value should be the idref of another element:
 
 ```html
 <button triggerpopup=mypopup>Click me</button>
 <div id=mypopup popup=popup>Popup content</div>
 ```
 
-
-When the button is activated, the UA will add the `open` attribute value to the `<div id=mypopup>` element, causing it to be rendered top-layer. In this way, no Javascript will be necessary for this use case.
+When the button in this example is activated, the UA will call `.showPopup()` on the `<div id=mypopup>` element. In this way, no Javascript will be necessary for this use case.
 
 When the `triggerpopup` attribute is applied to an activating element, the UA may automatically map this attribute to an appropriate `aria-*` attribute, such as `aria-haspopup`, `aria-describedby` or `aria-expanded`. There will need to be further discussion with the ARIA working group to determine the exact ARIA semantics, if any, are necessary.
+
+## Page Load Trigger (the `initiallyopen` attribute)
+
+As mentioned above, a `<div popup=popup>` will be hidden by default. If the popup should instead be shown upon page load, the `initallyopen` attribute can be applied:
+
+```html
+<div popup=popup initiallyopen>
+```
+
+In this case, the UA will immediately call `showPopup()` on the element, as it is parsed. If multiple such elements exist on the page, each subsequent popup will "one-at-a-time" close the prior popups, leaving only the last one showing in the end.
+
+
+## Visibility:hidden
+
+The `visibility:hidden` rule is applied by the UA, but it does **not** apply `visibility:hidden !important`. In other words, developer style rules can be used to override this behavior and make a non-top-layer popup visibility in the page. This can be used, for example, to animate the show/hide behavior of the popup, or make popup content "return to the page" instead of becoming hidden.
 
 
 ## Dismiss Behavior
@@ -106,7 +143,7 @@ For elements that are displayed on the top layer via this API, there are a numbe
 * **Light Dismiss**. User action such as clicking outside the element, hitting Escape, or causing keyboard focus to leave the element. This is typically called “light dismiss”.
 * **Other Reasons**. Because the top layer is a UA-managed resource, it may have other reasons (for example a user preference) to forcibly remove elements from the top layer.
 
-In all such cases, the UA manages the removal of elements from the top layer, by forcibly removing the `open` attribute from the element. This both removes the element from the top layer and renders the element `visibility:hidden`.
+In all such cases, the UA manages the removal of elements from the top layer, by forcibly removing the element from the top layer, and re-applying the `visibility:hidden` UA rule.
 
 The rules the UA uses to manage these interactions depends on the element types, and this is described in the following section.
 
@@ -133,103 +170,13 @@ The rules the UA uses to manage these interactions depends on the element types,
     * Dismisses on Esc
 
 <table>
-  <tr>
-   <td>
-   </td>
-   <td>
-   </td>
-   <td colspan="5" >
-Second element
-   </td>
-  </tr>
-  <tr>
-   <td>
-   </td>
-   <td>
-   </td>
-   <td>Fullscreen
-   </td>
-   <td>Modal Dialog
-   </td>
-   <td>Popup
-   </td>
-   <td>Hint
-   </td>
-   <td>Async
-   </td>
-  </tr>
-  <tr>
-   <td rowspan="5" >First Element
-   </td>
-   <td>Fullscreen
-   </td>
-   <td>Close
-   </td>
-   <td>Leave
-   </td>
-   <td>Leave
-   </td>
-   <td>Leave
-   </td>
-   <td>Leave
-   </td>
-  </tr>
-  <tr>
-   <td>Modal Dialog
-   </td>
-   <td>Close*
-   </td>
-   <td>Leave
-   </td>
-   <td>Leave
-   </td>
-   <td>Leave
-   </td>
-   <td>Leave
-   </td>
-  </tr>
-  <tr>
-   <td>Popup
-   </td>
-   <td>Close
-   </td>
-   <td>Close
-   </td>
-   <td>Close
-   </td>
-   <td>Leave
-   </td>
-   <td>Leave
-   </td>
-  </tr>
-  <tr>
-   <td>Hint
-   </td>
-   <td>Close
-   </td>
-   <td>Close
-   </td>
-   <td>Close
-   </td>
-   <td>Close
-   </td>
-   <td>Leave
-   </td>
-  </tr>
-  <tr>
-   <td>Async
-   </td>
-   <td>Close
-   </td>
-   <td>Close
-   </td>
-   <td>Leave
-   </td>
-   <td>Leave
-   </td>
-   <td>Leave
-   </td>
-  </tr>
+  <tr><td></td><td></td><td colspan="5">Second element</td></tr>
+  <tr><td></td><td></td><td>Fullscreen</td><td>Modal Dialog</td><td>Popup</td><td>Hint</td><td>Async</td></tr>
+  <tr><td rowspan="5" >First Element</td><td>Fullscreen</td><td>Close</td><td>Leave</td><td>Leave</td><td>Leave</td><td>Leave</td></tr>
+  <tr><td>Modal Dialog</td><td>Close*</td><td>Leave</td><td>Leave</td><td>Leave</td><td>Leave</td></tr>
+  <tr><td>Popup</td><td>Close</td><td>Close</td><td>Close</td><td>Leave</td><td>Leave</td></tr>
+  <tr><td>Hint</td><td>Close</td><td>Close</td><td>Close</td><td>Close</td><td>Leave</td></tr>
+  <tr><td>Async</td><td>Close</td><td>Close</td><td>Leave</td><td>Leave</td><td>Leave</td></tr>
 </table>
 
 *Not current behavior
@@ -341,7 +288,7 @@ This section contains several HTML examples, showing how various UI elements mig
   trigger.addEventListener('mouseover',() => {
     // This behavior could potentially be built into a new activation
     // content attribute, like <div trigger-on-hover=my-hint>.
-    hint.addAttribute(`open','');
+    hint.showPopup();
   });
 </script>
 ```
@@ -360,7 +307,7 @@ This section contains several HTML examples, showing how various UI elements mig
   window.addEventListener('message',e => {
     const container = document.querySelector('my-async-container');
     container.appendChild(document.createTextNode('Msg: ' + e.data));
-    container.addAttribute('open','');
+    container.showPopup();
   });
 </script>
 ```
@@ -372,8 +319,8 @@ This section contains several HTML examples, showing how various UI elements mig
 ### Pros
 
 * Solves all of the goals of the popup effort.
-* Solves the [Accessibility/Semantics problem](#alternative-dedicated-popup-element).
-* Allows the UA to manage the top layer, via addition and removal of the `open` attribute.
+* Solves the [Accessibility/Semantics problem](other_approaches.md#alternative-dedicated-popup-element).
+* Allows the UA to manage the top layer, removing popups when needed.
 * Works on **any element**.
 * Still good DX: it should be easy for developers to understand the meaning of an attribute on an element that is in the top layer.
 
